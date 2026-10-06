@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.build/
+.build-venv/
+.venv/
+.verification/
+release/
+/*.png
+.env
+.env.*
+key.dat
+*.log

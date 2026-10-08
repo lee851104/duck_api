@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import socket
 import tempfile
 import time
 import urllib.request
@@ -23,9 +24,12 @@ def run():
         env = dict(os.environ, LOCALAPPDATA=str(root / 'private'), PATH=os.environ['SystemRoot'] + '\\System32')
         env.pop('PYTHONPATH', None)
         env.pop('PYTHONHOME', None)
-        process = subprocess.Popen([str(executable), '--no-browser', '--port', '49165'], env=env,
+        with socket.socket() as probe:
+            probe.bind(('127.0.0.1', 0))
+            port = str(probe.getsockname()[1])
+        process = subprocess.Popen([str(executable), '--no-browser', '--port', port], env=env,
                                    creationflags=subprocess.CREATE_NO_WINDOW)
-        origin = 'http://127.0.0.1:49165'
+        origin = f'http://127.0.0.1:{port}'
         def request(path, body=None, token=''):
             req = urllib.request.Request(origin + path,
                   data=None if body is None else json.dumps(body).encode(),
@@ -44,7 +48,9 @@ def run():
             assert state['configured'] is False
             token = state['token']
             with urllib.request.urlopen(origin + '/') as response:
-                assert 'API 設定' in response.read().decode('utf-8')
+                html = response.read().decode('utf-8')
+                assert html == Path('order-workbench.html').read_text(encoding='utf-8'), 'Packaged UI differs from current source'
+                assert 'API 設定' in html
                 assert "frame-ancestors 'none'" in response.headers['Content-Security-Policy']
             fake = 'sk-test-only-not-a-real-credential-123456'
             request('/api/settings', {'key': fake}, token)
@@ -53,7 +59,7 @@ def run():
             assert request('/api/status')['configured'] is True
             request('/api/shutdown', {}, token)
             process.wait(timeout=10)
-            process = subprocess.Popen([str(executable), '--no-browser', '--port', '49165'], env=env,
+            process = subprocess.Popen([str(executable), '--no-browser', '--port', port], env=env,
                                        creationflags=subprocess.CREATE_NO_WINDOW)
             for _ in range(80):
                 try:
@@ -63,7 +69,7 @@ def run():
                     time.sleep(.25)
             assert state['configured'] is True
             token = state['token']
-            duplicate = subprocess.run([str(executable), '--no-browser', '--port', '49165'], env=env,
+            duplicate = subprocess.run([str(executable), '--no-browser', '--port', port], env=env,
                                       creationflags=subprocess.CREATE_NO_WINDOW, timeout=15)
             assert duplicate.returncode == 0
             request('/api/settings/clear', {}, token)

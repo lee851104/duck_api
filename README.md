@@ -1,6 +1,6 @@
 # 菜騎鴨 · 蔬果訂單整理
 
-Windows 本機工作介面：逐筆貼上 LINE 訊息，確認後一次整理最多 10 筆訂單。
+Windows 本機工作介面：逐筆貼上 LINE 訊息，確認後一次整理最多 50 筆訂單。
 
 ## 功能
 
@@ -18,7 +18,7 @@ Windows 本機工作介面：逐筆貼上 LINE 訊息，確認後一次整理最
 python app.py
 ```
 
-程式會開啟 http://127.0.0.1:49164/ 。第一次在設定貼上自己的 OpenAI API Key。
+程式會開啟 http://127.0.0.1:18765/ 。第一次在設定貼上自己的 OpenAI API Key。
 金鑰以 Windows DPAPI 加密，存於 `%LOCALAPPDATA%\CaiQiYa\key.dat`，不包含在 repository 或交付壓縮檔中。
 訂單保存在瀏覽器本機儲存空間。詳細操作見 [使用說明](使用說明.txt)。
 
@@ -29,6 +29,7 @@ Python 測試使用模擬 API，不會消耗 OpenAI 額度。前端驗證需 Nod
 ```powershell
 python -m unittest test_app -v
 node verify-workbench.cjs
+node verify-ui.cjs
 ```
 
 `ui_test_server.py` 為獨立模擬服務，使用臨時測試金鑰與 http://127.0.0.1:49166/，只供開發驗證。

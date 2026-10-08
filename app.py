@@ -19,7 +19,8 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 MODEL = 'gpt-6-luna'
-PORT = 49164
+PORT = 18765
+MAX_ORDERS = 50
 ROOT = Path(__file__).resolve().parent
 APP_ID = 'cai-qi-ya-local-v1'
 
@@ -113,6 +114,8 @@ INSTRUCTIONS = '''你是台灣蔬果行的訂單資料整理員，只抽取使�
 採部分成功：無論 issues 是否為空，都要在 items 輸出所有確定的商品，不能因某一行不明而省略其他商品。
 不確定的品項只放 issues，不猜數量，也不放進 items。所有品項都不確定時 items 可為空陣列。
 沒有預設商品目錄；自然語句如「台灣辣妹辣椒醬一罐」已明確表示商品及數量，應輸出該商品、1、罐。
+商品的數量不要重複放入 notes。但商品含金額時，必須將含金額的完整原句保留於 notes，交由系統對應商品金額，避免遺失價格；包含中文數字或特殊格式也一樣。例如「玉米3支60元」應為商品玉米、數量3、單位支，並保留原句於 notes；60元是金額，不是數量。
+只寫購買金額的商品，如「老薑50元」，應為商品老薑、數量50、單位元；不得省略元，也不得猜成50份或50斤。
 非商品資訊（例如載具、統編、發票資訊、聯絡電話、付款說明、收貨時間、放管理室等配送交代）一律放在 notes。
 notes 保留原文及編號，不當商品，不因這些內容沒有商品數量而加入 issues。品項本身的去皮、切珠等仍放 process。
 只有商品名稱、數量、配送地點等真的不明或矛盾才放 issues。notes、items、issues 都可為空陣列。
@@ -186,8 +189,8 @@ def call_openai(key, orders):
 
 def validate_batch(body):
     orders = body.get('orders')
-    if not isinstance(orders, list) or not 1 <= len(orders) <= 10:
-        raise UserError('每批請提供 1 至 10 筆訂單。')
+    if not isinstance(orders, list) or not 1 <= len(orders) <= MAX_ORDERS:
+        raise UserError(f'每批請提供 1 至 {MAX_ORDERS} 筆訂單。')
     ids = set()
     for order in orders:
         if (not isinstance(order, dict) or type(order.get('id')) is not int
@@ -313,7 +316,7 @@ class Handler(BaseHTTPRequestHandler):
             if self.headers.get('Content-Type', '').split(';')[0] != 'application/json':
                 raise UserError('請求格式錯誤。', 415)
             length = int(self.headers.get('Content-Length', '0'))
-            if not 0 < length <= 300000:
+            if not 0 < length <= 5000000:
                 raise UserError('內容太長或為空。', 413)
             body = json.loads(self.rfile.read(length))
             if not isinstance(body, dict):

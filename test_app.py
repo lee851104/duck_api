@@ -38,6 +38,12 @@ class ApplicationTests(unittest.TestCase):
         except urllib.error.HTTPError as error:
             return error.code, json.load(error)
 
+    def test_batch_accepts_fifty_and_rejects_fifty_one(self):
+        batch = [{'id': i, 'raw': f'社區{i}\n香蕉1根'} for i in range(1, 51)]
+        self.assertEqual(app.validate_batch({'orders': batch}), batch)
+        with self.assertRaises(app.UserError):
+            app.validate_batch({'orders': batch + [{'id': 51, 'raw': '另一單'}]})
+
     def test_luna_request_keeps_structured_output_and_notes_local(self):
         response = {'status': 'completed', 'output': [
             {'type': 'reasoning'},
